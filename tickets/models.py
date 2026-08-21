@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 
 
 class Category(models.Model):
@@ -51,18 +51,17 @@ class Ticket(models.Model):
     )
 
     created_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="created_tickets"
-    )
-
+)
     assigned_to = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="assigned_tickets"
-    )
+)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
