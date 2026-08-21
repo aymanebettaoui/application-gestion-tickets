@@ -1,10 +1,13 @@
-from django.http import JsonResponse
+from rest_framework import viewsets
+from .models import Ticket, Category
+from .serializers import TicketSerializer, CategorySerializer
 
 
-def health_check(request):
-    return JsonResponse(
-        {
-            "status": "success",
-            "message": "Ticket management backend is running",
-        }
-    )
+class TicketViewSet(viewsets.ModelViewSet):
+    queryset = Ticket.objects.all()
+    serializer_class = TicketSerializer
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer

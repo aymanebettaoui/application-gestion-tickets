@@ -1,8 +1,10 @@
-from django.urls import path
+from rest_framework.routers import DefaultRouter
+from .views import TicketViewSet, CategoryViewSet
 
-from .views import health_check
 
+router = DefaultRouter()
 
-urlpatterns = [
-    path("health/", health_check, name="health-check"),
-]
+router.register("tickets", TicketViewSet)
+router.register("categories", CategoryViewSet)
+
+urlpatterns = router.urls
