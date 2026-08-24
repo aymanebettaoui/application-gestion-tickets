@@ -4,7 +4,33 @@ from rest_framework.authtoken.views import obtain_auth_token
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
-    path("api/", include("tickets.urls")),
-    path("api/token/", obtain_auth_token),
+    # Django admin
+    path(
+        "admin/",
+        admin.site.urls,
+    ),
+
+    # Token authentication
+    path(
+        "api/token/",
+        obtain_auth_token,
+    ),
+
+    # REST API
+    path(
+        "api/",
+        include("tickets.urls"),
+    ),
+
+    # Login / logout
+    path(
+        "accounts/",
+        include("django.contrib.auth.urls"),
+    ),
+
+    # Small HTML website
+    path(
+        "",
+        include("tickets.web_urls"),
+    ),
 ]

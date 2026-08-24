@@ -1,0 +1,49 @@
+{% extends "tickets/base.html" %}
+
+
+{% block content %}
+
+<div class="form-page">
+
+    <div class="form-card">
+
+        <h1>Create a Ticket</h1>
+
+        <p class="subtitle">
+            Tell us what problem you are experiencing.
+        </p>
+
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+
+            <div class="form-actions">
+
+                <a
+                    href="{% url 'ticket-list' %}"
+                    class="secondary-button"
+                >
+                    Back
+                </a>
+
+
+                <button
+                    type="submit"
+                    class="primary-button"
+                >
+                    Create Ticket
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

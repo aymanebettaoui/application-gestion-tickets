@@ -1,0 +1,110 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Ticket Management</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'tickets/style.css' %}"
+    >
+</head>
+
+
+<body>
+
+<header class="navbar">
+
+    <div class="container nav-content">
+
+        <a href="{% url 'ticket-list' %}"
+           class="logo">
+            TicketFlow
+        </a>
+
+
+        {% if user.is_authenticated %}
+
+        <nav>
+
+            <a href="{% url 'ticket-list' %}">
+                Dashboard
+            </a>
+
+            {% if user.role == "CLIENT" or user.role == "ADMIN" %}
+
+            <a href="{% url 'ticket-create' %}">
+                New Ticket
+            </a>
+
+            {% endif %}
+
+
+            <span class="user-info">
+
+                {{ user.username }}
+                ·
+                {{ user.get_role_display }}
+
+            </span>
+
+
+            <form
+                method="post"
+                action="{% url 'logout' %}"
+                class="logout-form"
+            >
+
+                {% csrf_token %}
+
+                <button
+                    type="submit"
+                    class="logout-button"
+                >
+                    Logout
+                </button>
+
+            </form>
+
+        </nav>
+
+        {% endif %}
+
+    </div>
+
+</header>
+
+
+<main class="container">
+
+    {% if messages %}
+
+        {% for message in messages %}
+
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+
+    {% block content %}
+    {% endblock %}
+
+</main>
+
+
+</body>
+
+</html>

@@ -1,0 +1,215 @@
+{% extends "tickets/base.html" %}
+
+
+{% block content %}
+
+
+<div class="page-header">
+
+    <div>
+
+        <h1>Ticket Dashboard</h1>
+
+        <p class="subtitle">
+            Track and manage support requests.
+        </p>
+
+    </div>
+
+
+    {% if user.role == "CLIENT" or user.role == "ADMIN" %}
+
+    <a
+        href="{% url 'ticket-create' %}"
+        class="primary-button"
+    >
+        + New Ticket
+    </a>
+
+    {% endif %}
+
+</div>
+
+
+<div class="stats-grid">
+
+    <div class="stat-card">
+
+        <span>Total Tickets</span>
+
+        <strong>
+            {{ total_count }}
+        </strong>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <span>Open</span>
+
+        <strong>
+            {{ open_count }}
+        </strong>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <span>In Progress</span>
+
+        <strong>
+            {{ progress_count }}
+        </strong>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <span>Resolved</span>
+
+        <strong>
+            {{ resolved_count }}
+        </strong>
+
+    </div>
+
+</div>
+
+
+<div class="section-title">
+
+    <h2>
+        {% if user.role == "CLIENT" %}
+            My Tickets
+        {% elif user.role == "AGENT" %}
+            Assigned Tickets
+        {% else %}
+            All Tickets
+        {% endif %}
+    </h2>
+
+</div>
+
+
+<div class="ticket-list">
+
+{% for ticket in tickets %}
+
+    <div class="ticket-card">
+
+        <div class="ticket-header">
+
+            <div>
+
+                <span class="ticket-id">
+                    Ticket #{{ ticket.id }}
+                </span>
+
+                <h3>
+                    {{ ticket.title }}
+                </h3>
+
+            </div>
+
+
+            <span class="status status-{{ ticket.status|lower }}">
+
+                {{ ticket.get_status_display }}
+
+            </span>
+
+        </div>
+
+
+        <p class="ticket-description">
+
+            {{ ticket.description }}
+
+        </p>
+
+
+        <div class="ticket-details">
+
+            <div>
+                <span>Priority</span>
+                <strong>
+                    {{ ticket.get_priority_display }}
+                </strong>
+            </div>
+
+
+            <div>
+                <span>Category</span>
+                <strong>
+                    {{ ticket.category|default:"Not specified" }}
+                </strong>
+            </div>
+
+
+            <div>
+                <span>Created by</span>
+                <strong>
+                    {{ ticket.created_by.username }}
+                </strong>
+            </div>
+
+
+            <div>
+                <span>Assigned to</span>
+
+                <strong>
+                    {% if ticket.assigned_to %}
+                        {{ ticket.assigned_to.username }}
+                    {% else %}
+                        Not assigned
+                    {% endif %}
+                </strong>
+            </div>
+
+        </div>
+
+
+        {% if user.role == "CLIENT" and ticket.status == "OPEN" %}
+
+        <form
+            method="post"
+            action="{% url 'ticket-cancel' ticket.id %}"
+        >
+
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="cancel-button"
+            >
+                Cancel Ticket
+            </button>
+
+        </form>
+
+        {% endif %}
+
+    </div>
+
+
+{% empty %}
+
+    <div class="empty-state">
+
+        <h3>No tickets found</h3>
+
+        <p>
+            Your tickets will appear here.
+        </p>
+
+    </div>
+
+{% endfor %}
+
+</div>
+
+
+{% endblock %}
