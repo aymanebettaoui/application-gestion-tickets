@@ -4,7 +4,7 @@ from .views import TicketViewSet, CategoryViewSet
 
 router = DefaultRouter()
 
-router.register("tickets", TicketViewSet)
+router.register("tickets", TicketViewSet, basename="ticket")
 router.register("categories", CategoryViewSet)
 
 urlpatterns = router.urls
