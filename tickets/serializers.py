@@ -28,16 +28,47 @@ class TicketSerializer(serializers.ModelSerializer):
 
         user = request.user
 
-        if user.role == "CLIENT":
-            if self.instance:
-                if "status" in attrs:
-                    raise serializers.ValidationError(
-                        {"status": "Clients cannot change ticket status."}
-                    )
+        # If somebody assigns a user, that user must be an AGENT
+        if "assigned_to" in attrs:
+            assigned_user = attrs.get("assigned_to")
 
-                if "assigned_to" in attrs:
-                    raise serializers.ValidationError(
-                        {"assigned_to": "Clients cannot assign tickets."}
-                    )
+            if assigned_user is not None and assigned_user.role != "AGENT":
+                raise serializers.ValidationError(
+                    {
+                        "assigned_to":
+                        "Tickets can only be assigned to an agent."
+                    }
+                )
+
+        # CLIENT restrictions
+        if user.role == "CLIENT" and self.instance:
+
+            if "status" in attrs:
+                raise serializers.ValidationError(
+                    {
+                        "status":
+                        "Clients cannot change ticket status."
+                    }
+                )
+
+            if "assigned_to" in attrs:
+                raise serializers.ValidationError(
+                    {
+                        "assigned_to":
+                        "Clients cannot assign tickets."
+                    }
+                )
+
+        # AGENT restrictions
+        if user.role == "AGENT" and self.instance:
+
+            allowed_fields = {"status"}
+
+            invalid_fields = set(attrs.keys()) - allowed_fields
+
+            if invalid_fields:
+                raise serializers.ValidationError(
+                    "Agents can only update the ticket status."
+                )
 
         return attrs
