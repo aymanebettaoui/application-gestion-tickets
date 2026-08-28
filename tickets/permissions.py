@@ -12,6 +12,8 @@ class TicketPermission(BasePermission):
 
         # ADMIN can do everything
         if user.role == "ADMIN":
+            if request.method == "POST":
+                return False  # Admin cannot create tickets via API
             return True
 
         # CLIENT

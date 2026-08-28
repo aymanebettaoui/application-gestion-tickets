@@ -17,7 +17,7 @@
     </div>
 
 
-    {% if user.role == "CLIENT" or user.role == "ADMIN" %}
+    {% if user.role == "CLIENT" %}
 
     <a
         href="{% url 'ticket-create' %}"
@@ -98,7 +98,7 @@
 
 {% for ticket in tickets %}
 
-    <div class="ticket-card">
+    <div class="ticket-card" id="ticket-{{ ticket.id }}">
 
         <div class="ticket-header">
 
@@ -170,8 +170,161 @@
             </div>
 
         </div>
+{% if user.role == "AGENT" %}
+
+<div class="agent-actions">
+
+    <span class="agent-action-title">
+        Ticket Processing
+    </span>
+
+    {% if ticket.status == "OPEN" %}
+
+        <form
+            method="post"
+            action="{% url 'ticket-update-status' ticket.id %}"
+        >
+            {% csrf_token %}
+
+            <input
+                type="hidden"
+                name="status"
+                value="IN_PROGRESS"
+            >
+
+            <button
+                type="submit"
+                class="start-button"
+            >
+                Start Working
+            </button>
+
+        </form>
 
 
+    {% elif ticket.status == "IN_PROGRESS" %}
+
+        <form
+            method="post"
+            action="{% url 'ticket-update-status' ticket.id %}"
+        >
+            {% csrf_token %}
+
+            <input
+                type="hidden"
+                name="status"
+                value="RESOLVED"
+            >
+
+            <button
+                type="submit"
+                class="resolve-button"
+            >
+                Mark as Resolved
+            </button>
+
+        </form>
+
+
+    {% elif ticket.status == "RESOLVED" %}
+
+        <span class="completed-message">
+            ✓ Ticket resolved
+        </span>
+
+    {% endif %}
+
+</div>
+
+{% endif %}
+{% if user.role == "ADMIN" %}
+
+<div class="assignment-panel">
+
+    <div class="assignment-header">
+
+        <div>
+            <span class="assignment-title">
+                Agent Assignment
+            </span>
+
+            <span class="assignment-description">
+                Assign this ticket to a support agent.
+            </span>
+        </div>
+
+        {% if ticket.assigned_to %}
+            <span class="assigned-badge">
+                Assigned
+            </span>
+        {% else %}
+            <span class="unassigned-badge">
+                Unassigned
+            </span>
+        {% endif %}
+
+    </div>
+
+
+    <form
+        method="post"
+        action="{% url 'ticket-assign' ticket.id %}"
+        class="assignment-form"
+    >
+
+        {% csrf_token %}
+
+        <div class="agent-select-wrapper">
+
+            <label for="agent-{{ ticket.id }}">
+                Support agent
+            </label>
+
+            <select
+                id="agent-{{ ticket.id }}"
+                name="assigned_to"
+                class="agent-select"
+                required
+            >
+
+                <option value="">
+                    Select an agent
+                </option>
+
+                {% for agent in agents %}
+
+                    <option
+                        value="{{ agent.id }}"
+                        {% if ticket.assigned_to == agent %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ agent.username }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="assign-button"
+        >
+            {% if ticket.assigned_to %}
+                Reassign Agent
+            {% else %}
+                Assign Agent
+            {% endif %}
+        </button>
+
+    </form>
+
+</div>
+
+{% endif %}
         {% if user.role == "CLIENT" and ticket.status == "OPEN" %}
 
         <form
