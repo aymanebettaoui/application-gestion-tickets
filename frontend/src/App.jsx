@@ -15,8 +15,10 @@ import DashboardPage from './components/DashboardPage.jsx'
 import TicketsPage from './pages/TicketsPage.jsx'
 import CreateTicketPage from './pages/CreateTicketPage.jsx'
 import AdminPage from './pages/AdminPage.jsx'
+import AgentPage from './pages/AgentPage.jsx'
 
 import DashboardLayout from './components/DashboardLayout.jsx'
+
 
 function App() {
   return (
@@ -25,9 +27,15 @@ function App() {
 
       <BrowserRouter>
         <Routes>
+
           <Route
             path="/"
-            element={<Navigate to="/login" replace />}
+            element={
+              <Navigate
+                to="/login"
+                replace
+              />
+            }
           />
 
           <Route
@@ -36,6 +44,7 @@ function App() {
           />
 
           <Route element={<DashboardLayout />}>
+
             <Route
               path="/dashboard"
               element={<DashboardPage />}
@@ -55,7 +64,14 @@ function App() {
               path="/admin"
               element={<AdminPage />}
             />
+
+            <Route
+              path="/agent"
+              element={<AgentPage />}
+            />
+
           </Route>
+
         </Routes>
       </BrowserRouter>
     </ThemeProvider>

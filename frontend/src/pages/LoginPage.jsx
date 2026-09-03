@@ -13,16 +13,19 @@ function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/token/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      })
+      const response = await fetch(
+        'http://127.0.0.1:8000/api/token/',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username,
+            password,
+          }),
+        }
+      )
 
       const data = await response.json()
 
@@ -33,7 +36,33 @@ function LoginPage() {
 
       localStorage.setItem('token', data.token)
 
-      navigate('/tickets')
+      const userResponse = await fetch(
+        'http://127.0.0.1:8000/api/me/',
+        {
+          headers: {
+            Authorization: `Token ${data.token}`,
+          },
+        }
+      )
+
+      if (!userResponse.ok) {
+        localStorage.removeItem('token')
+        setError('Impossible de récupérer le profil utilisateur.')
+        return
+      }
+
+      const user = await userResponse.json()
+
+      localStorage.setItem('role', user.role)
+      localStorage.setItem('username', user.username)
+
+      if (user.role === 'ADMIN') {
+        navigate('/dashboard')
+      } else if (user.role === 'AGENT') {
+        navigate('/agent')
+      } else {
+        navigate('/tickets')
+      }
     } catch {
       setError('Impossible de contacter le serveur.')
     }
@@ -49,7 +78,9 @@ function LoginPage() {
             type="text"
             placeholder="Nom d'utilisateur"
             value={username}
-            onChange={(event) => setUsername(event.target.value)}
+            onChange={(event) =>
+              setUsername(event.target.value)
+            }
             required
           />
         </div>
@@ -59,7 +90,9 @@ function LoginPage() {
             type="password"
             placeholder="Mot de passe"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
             required
           />
         </div>

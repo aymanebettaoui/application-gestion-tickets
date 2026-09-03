@@ -16,7 +16,7 @@ function AdminPage() {
   const navigate = useNavigate()
 
   const [tickets, setTickets] = useState([])
-  const [users, setUsers] = useState([])
+  const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -31,7 +31,7 @@ function AdminPage() {
     }
 
     try {
-      const [ticketsResponse, usersResponse] = await Promise.all([
+      const [ticketsResponse, agentsResponse] = await Promise.all([
         fetch('http://127.0.0.1:8000/api/tickets/', {
           headers: {
             Authorization: `Token ${token}`,
@@ -45,7 +45,10 @@ function AdminPage() {
         }),
       ])
 
-      if (ticketsResponse.status === 401 || ticketsResponse.status === 403) {
+      if (
+        ticketsResponse.status === 401 ||
+        ticketsResponse.status === 403
+      ) {
         localStorage.removeItem('token')
         navigate('/login')
         return
@@ -64,18 +67,15 @@ function AdminPage() {
           : ticketsData.results || []
       )
 
-     const usersData = await usersResponse.json()
+      if (agentsResponse.ok) {
+        const agentsData = await agentsResponse.json()
 
-console.log('USERS STATUS:', usersResponse.status)
-console.log('USERS DATA:', usersData)
-
-if (usersResponse.ok) {
-  setUsers(
-    Array.isArray(usersData)
-      ? usersData
-      : usersData.results || []
-  )
-}
+        setAgents(
+          Array.isArray(agentsData)
+            ? agentsData
+            : agentsData.results || []
+        )
+      }
     } catch {
       setError('Impossible de contacter le serveur.')
     } finally {
@@ -87,57 +87,29 @@ if (usersResponse.ok) {
     loadData()
   }, [])
 
-  const handleStatusChange = async (ticketId, newStatus) => {
+  const handleAssign = async (ticketId, agentId) => {
     const token = getToken()
 
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/tickets/${ticketId}/`,
-        {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Token ${token}`,
-          },
-          body: JSON.stringify({
-            status: newStatus,
-          }),
-        }
-      )
-
-      if (!response.ok) {
-        setError('Impossible de modifier le statut.')
-        return
-      }
-
-      await loadData()
-    } catch {
-      setError('Impossible de contacter le serveur.')
-    }
-  }
-
-  const handleAssign = async (ticketId, userId) => {
-    const token = getToken()
+    setError('')
 
     try {
       const response = await fetch(
         `http://127.0.0.1:8000/api/tickets/${ticketId}/assign/`,
         {
           method: 'PATCH',
+
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Token ${token}`,
           },
+
           body: JSON.stringify({
-            assigned_to: userId || null,
+            assigned_to: agentId || null,
           }),
         }
       )
 
       if (!response.ok) {
-        const data = await response.json()
-        console.log(data)
-
         setError("Impossible d'affecter le ticket.")
         return
       }
@@ -159,25 +131,18 @@ if (usersResponse.ok) {
       field: 'title',
       headerName: 'Titre',
       flex: 1,
-      minWidth: 180,
-      renderCell: (params) =>
-        params.row.title ||
-        params.row.titre ||
-        `Ticket #${params.row.id}`,
+      minWidth: 200,
     },
 
     {
       field: 'priority',
       headerName: 'Priorité',
-      width: 130,
+      width: 140,
+
       renderCell: (params) => (
         <Chip
+          label={params.row.priority}
           size="small"
-          label={
-            params.row.priority ||
-            params.row.priorite ||
-            'Non définie'
-          }
         />
       ),
     },
@@ -185,40 +150,32 @@ if (usersResponse.ok) {
     {
       field: 'status',
       headerName: 'Statut',
-      width: 180,
+      width: 160,
+
       renderCell: (params) => (
-        <Select
+        <Chip
+          label={params.row.status}
           size="small"
-          value={params.row.status || 'OPEN'}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) =>
-            handleStatusChange(
-              params.row.id,
-              event.target.value
-            )
+          color={
+            params.row.status === 'RESOLVED'
+              ? 'success'
+              : params.row.status === 'IN_PROGRESS'
+              ? 'warning'
+              : 'default'
           }
-          sx={{ width: 150 }}
-        >
-          <MenuItem value="OPEN">Ouvert</MenuItem>
-          <MenuItem value="IN_PROGRESS">En cours</MenuItem>
-          <MenuItem value="RESOLVED">Résolu</MenuItem>
-          <MenuItem value="CLOSED">Fermé</MenuItem>
-        </Select>
+        />
       ),
     },
 
     {
       field: 'assigned_to',
       headerName: 'Affectation',
-      width: 200,
+      width: 220,
+
       renderCell: (params) => (
         <Select
           size="small"
-          value={
-            params.row.assigned_to?.id ||
-            params.row.assigned_to ||
-            ''
-          }
+          value={params.row.assigned_to || ''}
           displayEmpty
           onClick={(event) => event.stopPropagation()}
           onChange={(event) =>
@@ -227,18 +184,18 @@ if (usersResponse.ok) {
               event.target.value
             )
           }
-          sx={{ width: 170 }}
+          sx={{ width: 190 }}
         >
           <MenuItem value="">
             Non assigné
           </MenuItem>
 
-          {users.map((user) => (
+          {agents.map((agent) => (
             <MenuItem
-              key={user.id}
-              value={user.id}
+              key={agent.id}
+              value={agent.id}
             >
-              {user.username}
+              {agent.username}
             </MenuItem>
           ))}
         </Select>

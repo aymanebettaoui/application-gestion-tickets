@@ -1,11 +1,5 @@
-import {
-  useEffect,
-  useState,
-} from 'react'
-
-import {
-  useNavigate,
-} from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import {
   Alert,
@@ -15,25 +9,20 @@ import {
   Typography,
 } from '@mui/material'
 
-import AddIcon from '@mui/icons-material/Add'
-import CancelIcon from '@mui/icons-material/Cancel'
-
-import {
-  DataGrid,
-} from '@mui/x-data-grid'
+import { DataGrid } from '@mui/x-data-grid'
 
 
-function TicketsPage() {
+function AgentPage() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const navigate = useNavigate()
 
-  const role = localStorage.getItem('role')
+  const getToken = () => localStorage.getItem('token')
 
   const loadTickets = async () => {
-    const token = localStorage.getItem('token')
+    const token = getToken()
 
     if (!token) {
       navigate('/login')
@@ -60,65 +49,84 @@ function TicketsPage() {
       }
 
       if (!response.ok) {
-        setError(
-          'Impossible de charger les tickets.'
-        )
+        setError('Impossible de charger les tickets.')
         return
       }
 
       const data = await response.json()
 
-      const rawTickets = Array.isArray(data)
+      const ticketList = Array.isArray(data)
         ? data
         : data.results || []
 
-      setTickets(rawTickets)
+      setTickets(ticketList)
     } catch {
-      setError(
-        'Impossible de contacter le serveur.'
-      )
+      setError('Impossible de contacter le serveur.')
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
+    const role = localStorage.getItem('role')
+
+    if (role !== 'AGENT') {
+      navigate('/login')
+      return
+    }
+
     loadTickets()
   }, [navigate])
 
-  const handleCancel = async (ticketId) => {
-    const token = localStorage.getItem('token')
+  const handleStatusChange = async (ticket) => {
+    let newStatus = null
+
+    if (ticket.status === 'OPEN') {
+      newStatus = 'IN_PROGRESS'
+    }
+
+    if (ticket.status === 'IN_PROGRESS') {
+      newStatus = 'RESOLVED'
+    }
+
+    if (!newStatus) {
+      return
+    }
+
+    const token = getToken()
 
     setError('')
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/tickets/${ticketId}/cancel/`,
+        `http://127.0.0.1:8000/api/tickets/${ticket.id}/update_status/`,
         {
-          method: 'POST',
+          method: 'PATCH',
 
           headers: {
+            'Content-Type': 'application/json',
             Authorization: `Token ${token}`,
           },
+
+          body: JSON.stringify({
+            status: newStatus,
+          }),
         }
       )
 
       if (!response.ok) {
         const data = await response.json()
-
         console.log(data)
 
         setError(
-          "Impossible d'annuler ce ticket."
+          'Impossible de modifier le statut du ticket.'
         )
         return
       }
 
       await loadTickets()
     } catch {
-      setError(
-        'Impossible de contacter le serveur.'
-      )
+      setError('Impossible de contacter le serveur.')
     }
   }
 
@@ -144,26 +152,6 @@ function TicketsPage() {
     }
 
     return status
-  }
-
-  const getPriorityLabel = (priority) => {
-    if (priority === 'LOW') {
-      return 'Faible'
-    }
-
-    if (priority === 'MEDIUM') {
-      return 'Moyenne'
-    }
-
-    if (priority === 'HIGH') {
-      return 'Élevée'
-    }
-
-    if (priority === 'URGENT') {
-      return 'Urgente'
-    }
-
-    return priority
   }
 
   const columns = [
@@ -194,12 +182,8 @@ function TicketsPage() {
 
       renderCell: (params) => (
         <Chip
+          label={params.row.priority}
           size="small"
-          label={
-            getPriorityLabel(
-              params.row.priority
-            )
-          }
         />
       ),
     },
@@ -211,106 +195,81 @@ function TicketsPage() {
 
       renderCell: (params) => (
         <Chip
+          label={getStatusLabel(params.row.status)}
           size="small"
-          label={
-            getStatusLabel(
-              params.row.status
-            )
-          }
           color={
             params.row.status === 'RESOLVED'
               ? 'success'
               : params.row.status === 'IN_PROGRESS'
               ? 'warning'
-              : params.row.status === 'CANCELLED'
-              ? 'error'
               : 'default'
           }
         />
       ),
     },
-  ]
 
-  if (role === 'CLIENT') {
-    columns.push({
+    {
       field: 'action',
       headerName: 'Action',
-      width: 160,
+      width: 180,
       sortable: false,
       filterable: false,
 
       renderCell: (params) => {
-        if (params.row.status !== 'OPEN') {
+        if (params.row.status === 'OPEN') {
           return (
-            <Typography
-              variant="body2"
-              color="text.secondary"
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() =>
+                handleStatusChange(params.row)
+              }
             >
-              —
-            </Typography>
+              Commencer
+            </Button>
+          )
+        }
+
+        if (params.row.status === 'IN_PROGRESS') {
+          return (
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              onClick={() =>
+                handleStatusChange(params.row)
+              }
+            >
+              Résoudre
+            </Button>
           )
         }
 
         return (
-          <Button
-            size="small"
-            color="error"
-            startIcon={<CancelIcon />}
-            onClick={() =>
-              handleCancel(params.row.id)
-            }
-          >
-            Annuler
-          </Button>
+          <Typography variant="body2">
+            Aucune action
+          </Typography>
         )
       },
-    })
-  }
+    },
+  ]
 
   return (
     <Box>
-
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}
+      <Typography
+        variant="h3"
+        fontWeight="bold"
+        mb={1}
       >
+        MES TICKETS ASSIGNÉS
+      </Typography>
 
-        <Box>
-          <Typography
-            variant="h3"
-            fontWeight="bold"
-          >
-            {role === 'CLIENT'
-              ? 'MES TICKETS'
-              : 'TICKETS'}
-          </Typography>
-
-          <Typography
-            color="secondary"
-          >
-            {role === 'CLIENT'
-              ? 'Suivi de mes demandes'
-              : 'Liste des tickets'}
-          </Typography>
-        </Box>
-
-        {role === 'CLIENT' && (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() =>
-              navigate('/new-ticket')
-            }
-          >
-            Nouveau ticket
-          </Button>
-        )}
-
-      </Box>
+      <Typography
+        color="secondary"
+        mb={3}
+      >
+        Traitement des tickets qui me sont affectés
+      </Typography>
 
       {error && (
         <Alert
@@ -331,11 +290,7 @@ function TicketsPage() {
           rows={tickets}
           columns={columns}
           loading={loading}
-          pageSizeOptions={[
-            5,
-            10,
-            20,
-          ]}
+          pageSizeOptions={[5, 10, 20]}
           initialState={{
             pagination: {
               paginationModel: {
@@ -346,9 +301,8 @@ function TicketsPage() {
           disableRowSelectionOnClick
         />
       </Box>
-
     </Box>
   )
 }
 
-export default TicketsPage
+export default AgentPage
