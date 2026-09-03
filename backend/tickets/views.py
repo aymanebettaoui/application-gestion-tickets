@@ -1,8 +1,10 @@
+from django.contrib.auth import get_user_model
+
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
 
 from .models import Ticket, Category
 from .serializers import (
@@ -11,6 +13,7 @@ from .serializers import (
     AgentSerializer,
 )
 from .permissions import TicketPermission, IsAdminOrReadOnly
+
 
 User = get_user_model()
 
@@ -51,13 +54,19 @@ class TicketViewSet(viewsets.ModelViewSet):
 
         if request.user.role != "CLIENT":
             return Response(
-                {"detail": "Only clients can cancel their tickets."},
+                {
+                    "detail":
+                    "Only clients can cancel their tickets."
+                },
                 status=status.HTTP_403_FORBIDDEN
             )
 
         if ticket.status != "OPEN":
             return Response(
-                {"detail": "Only open tickets can be cancelled."},
+                {
+                    "detail":
+                    "Only open tickets can be cancelled."
+                },
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -73,7 +82,10 @@ class TicketViewSet(viewsets.ModelViewSet):
     def assign(self, request, pk=None):
         if request.user.role != "ADMIN":
             return Response(
-                {"detail": "Only administrators can assign tickets."},
+                {
+                    "detail":
+                    "Only administrators can assign tickets."
+                },
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -90,15 +102,66 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             if agent is None:
                 return Response(
-                    {"assigned_to": "Select a valid agent."},
+                    {
+                        "assigned_to":
+                        "Select a valid agent."
+                    },
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
             ticket.assigned_to = agent
 
-        ticket.save(update_fields=["assigned_to", "updated_at"])
+        ticket.save(
+            update_fields=[
+                "assigned_to",
+                "updated_at",
+            ]
+        )
 
-        return Response(TicketSerializer(ticket).data)
+        return Response(
+            TicketSerializer(ticket).data,
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=["patch"])
+    def update_status(self, request, pk=None):
+        if request.user.role != "AGENT":
+            return Response(
+                {
+                    "detail":
+                    "Only agents can update ticket status."
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        ticket = self.get_object()
+        new_status = request.data.get("status")
+
+        allowed_transitions = {
+            "OPEN": "IN_PROGRESS",
+            "IN_PROGRESS": "RESOLVED",
+        }
+
+        expected_status = allowed_transitions.get(
+            ticket.status
+        )
+
+        if new_status != expected_status:
+            return Response(
+                {
+                    "detail":
+                    "This status change is not allowed."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        ticket.status = new_status
+        ticket.save()
+
+        return Response(
+            TicketSerializer(ticket).data,
+            status=status.HTTP_200_OK
+        )
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -113,6 +176,19 @@ class AgentViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         if self.request.user.role == "ADMIN":
-            return User.objects.filter(role="AGENT")
+            return User.objects.filter(
+                role="AGENT"
+            )
 
         return User.objects.none()
+
+
+class CurrentUserView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "id": request.user.id,
+            "username": request.user.username,
+            "role": request.user.role,
+        })

@@ -1,9 +1,11 @@
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
     TicketViewSet,
     CategoryViewSet,
     AgentViewSet,
+    CurrentUserView,
 )
 
 
@@ -26,4 +28,12 @@ router.register(
     basename="user"
 )
 
-urlpatterns = router.urls
+urlpatterns = [
+    path(
+        "me/",
+        CurrentUserView.as_view(),
+        name="current-user"
+    ),
+]
+
+urlpatterns += router.urls
