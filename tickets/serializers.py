@@ -1,5 +1,8 @@
 from rest_framework import serializers
 from .models import Ticket, Category
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -72,3 +75,15 @@ class TicketSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+
+class AgentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "email",
+            "role",
+        ]

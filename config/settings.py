@@ -42,11 +42,14 @@ INSTALLED_APPS = [
     'rest_framework',
 
     'users',
-    'tickets'
+    'tickets',
+
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -143,3 +146,7 @@ LOGIN_URL = "/accounts/login/"
 LOGIN_REDIRECT_URL = "/"
 
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]

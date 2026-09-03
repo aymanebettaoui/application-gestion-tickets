@@ -1,10 +1,18 @@
 from rest_framework import viewsets, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.contrib.auth import get_user_model
 
 from .models import Ticket, Category
-from .serializers import TicketSerializer, CategorySerializer
+from .serializers import (
+    TicketSerializer,
+    CategorySerializer,
+    AgentSerializer,
+)
 from .permissions import TicketPermission, IsAdminOrReadOnly
+
+User = get_user_model()
 
 
 class TicketViewSet(viewsets.ModelViewSet):
@@ -61,8 +69,50 @@ class TicketViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
 
+    @action(detail=True, methods=["patch"])
+    def assign(self, request, pk=None):
+        if request.user.role != "ADMIN":
+            return Response(
+                {"detail": "Only administrators can assign tickets."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        ticket = self.get_object()
+        agent_id = request.data.get("assigned_to")
+
+        if not agent_id:
+            ticket.assigned_to = None
+        else:
+            agent = User.objects.filter(
+                pk=agent_id,
+                role="AGENT"
+            ).first()
+
+            if agent is None:
+                return Response(
+                    {"assigned_to": "Select a valid agent."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            ticket.assigned_to = agent
+
+        ticket.save(update_fields=["assigned_to", "updated_at"])
+
+        return Response(TicketSerializer(ticket).data)
+
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [IsAdminOrReadOnly]
+
+
+class AgentViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = AgentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.role == "ADMIN":
+            return User.objects.filter(role="AGENT")
+
+        return User.objects.none()
