@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 
@@ -12,10 +13,16 @@ import {
   Box,
   Button,
   Chip,
+  InputAdornment,
+  Paper,
+  TextField,
   Typography,
 } from '@mui/material'
 
-import ChatIcon from '@mui/icons-material/Chat'
+import ChatOutlinedIcon
+  from '@mui/icons-material/ChatOutlined'
+import SearchIcon
+  from '@mui/icons-material/Search'
 
 import {
   DataGrid,
@@ -23,11 +30,12 @@ import {
 
 
 function AgentPage() {
+  const navigate = useNavigate()
+
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  const navigate = useNavigate()
+  const [search, setSearch] = useState('')
 
   const loadTickets = async () => {
     const token =
@@ -65,7 +73,8 @@ function AgentPage() {
         return
       }
 
-      const data = await response.json()
+      const data =
+        await response.json()
 
       setTickets(
         Array.isArray(data)
@@ -93,48 +102,134 @@ function AgentPage() {
     loadTickets()
   }, [navigate])
 
-  const getStatusLabel = (status) => {
-    const labels = {
-      OPEN: 'Ouvert',
-      IN_PROGRESS: 'En cours',
-      RESOLVED: 'Résolu',
-      CLOSED: 'Fermé',
-      CANCELLED: 'Annulé',
-    }
-
-    return labels[status] || status
+  const statusLabels = {
+    OPEN: 'Ouvert',
+    IN_PROGRESS: 'En cours',
+    RESOLVED: 'Résolu',
+    CLOSED: 'Fermé',
+    CANCELLED: 'Annulé',
   }
+
+  const priorityLabels = {
+    LOW: 'Faible',
+    MEDIUM: 'Moyenne',
+    HIGH: 'Élevée',
+    URGENT: 'Urgente',
+  }
+
+  const statusColors = {
+    OPEN: 'info',
+    IN_PROGRESS: 'warning',
+    RESOLVED: 'success',
+    CLOSED: 'success',
+    CANCELLED: 'error',
+  }
+
+  const priorityColors = {
+    LOW: 'default',
+    MEDIUM: 'info',
+    HIGH: 'warning',
+    URGENT: 'error',
+  }
+
+  const filteredTickets =
+    useMemo(() => {
+      const value =
+        search.trim().toLowerCase()
+
+      if (!value) {
+        return tickets
+      }
+
+      return tickets.filter(
+        (ticket) =>
+          ticket.title
+            ?.toLowerCase()
+            .includes(value) ||
+
+          ticket.description
+            ?.toLowerCase()
+            .includes(value) ||
+
+          String(ticket.id)
+            .includes(value) ||
+
+          statusLabels[
+            ticket.status
+          ]
+            ?.toLowerCase()
+            .includes(value)
+      )
+    }, [tickets, search])
+
+  const openCount =
+    tickets.filter(
+      (ticket) =>
+        ticket.status === 'OPEN'
+    ).length
+
+  const progressCount =
+    tickets.filter(
+      (ticket) =>
+        ticket.status === 'IN_PROGRESS'
+    ).length
+
+  const resolvedCount =
+    tickets.filter(
+      (ticket) =>
+        ticket.status === 'RESOLVED'
+    ).length
 
   const columns = [
     {
       field: 'id',
       headerName: 'ID',
-      width: 70,
+      width: 75,
     },
 
     {
       field: 'title',
       headerName: 'Titre',
       flex: 1,
-      minWidth: 180,
+      minWidth: 190,
+
+      renderCell: (params) => (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+        >
+          {params.row.title}
+        </Typography>
+      ),
     },
 
     {
       field: 'description',
       headerName: 'Description',
-      flex: 1,
-      minWidth: 220,
+      flex: 1.4,
+      minWidth: 250,
     },
 
     {
       field: 'priority',
       headerName: 'Priorité',
-      width: 130,
+      width: 125,
 
       renderCell: (params) => (
         <Chip
-          label={params.row.priority}
           size="small"
+          variant="outlined"
+          label={
+            priorityLabels[
+              params.row.priority
+            ] ||
+            params.row.priority
+          }
+          color={
+            priorityColors[
+              params.row.priority
+            ] || 'default'
+          }
         />
       ),
     },
@@ -142,24 +237,21 @@ function AgentPage() {
     {
       field: 'status',
       headerName: 'Statut',
-      width: 150,
+      width: 135,
 
       renderCell: (params) => (
         <Chip
-          label={
-            getStatusLabel(
-              params.row.status
-            )
-          }
           size="small"
+          label={
+            statusLabels[
+              params.row.status
+            ] ||
+            params.row.status
+          }
           color={
-            params.row.status ===
-            'RESOLVED'
-              ? 'success'
-              : params.row.status ===
-                'IN_PROGRESS'
-              ? 'warning'
-              : 'default'
+            statusColors[
+              params.row.status
+            ] || 'default'
           }
         />
       ),
@@ -170,12 +262,15 @@ function AgentPage() {
       headerName: 'Conversation',
       width: 160,
       sortable: false,
+      filterable: false,
 
       renderCell: (params) => (
         <Button
-          variant="contained"
+          variant="outlined"
           size="small"
-          startIcon={<ChatIcon />}
+          startIcon={
+            <ChatOutlinedIcon />
+          }
           onClick={() =>
             navigate(
               `/tickets/${params.row.id}`
@@ -190,26 +285,28 @@ function AgentPage() {
 
   return (
     <Box>
-      <Typography
-        variant="h3"
-        fontWeight="bold"
-        mb={1}
-      >
-        MES TICKETS ASSIGNÉS
-      </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h3"
+          fontWeight="bold"
+        >
+          Tickets assignés
+        </Typography>
 
-      <Typography
-        color="secondary"
-        mb={3}
-      >
-        Échangez avec les clients pour
-        résoudre leurs demandes
-      </Typography>
+        <Typography
+          color="text.secondary"
+          mt={0.7}
+        >
+          Échangez avec les clients et
+          traitez les demandes qui vous
+          sont affectées.
+        </Typography>
+      </Box>
 
       {error && (
         <Alert
           severity="error"
-          sx={{ mb: 2 }}
+          sx={{ mb: 3 }}
         >
           {error}
         </Alert>
@@ -217,25 +314,210 @@ function AgentPage() {
 
       <Box
         sx={{
-          height: 600,
-          width: '100%',
+          display: 'flex',
+          gap: 2,
+          mb: 3,
+          flexWrap: 'wrap',
         }}
       >
-        <DataGrid
-          rows={tickets}
-          columns={columns}
-          loading={loading}
-          pageSizeOptions={[5, 10, 20]}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 10,
-              },
-            },
+        <Paper
+          sx={{
+            p: 2.5,
+            minWidth: 170,
+            borderRadius: 3,
+            border:
+              '1px solid rgba(255,255,255,0.06)',
           }}
-          disableRowSelectionOnClick
-        />
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            Assignés
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+          >
+            {tickets.length}
+          </Typography>
+        </Paper>
+
+        <Paper
+          sx={{
+            p: 2.5,
+            minWidth: 170,
+            borderRadius: 3,
+            border:
+              '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            À commencer
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+            color="info.main"
+          >
+            {openCount}
+          </Typography>
+        </Paper>
+
+        <Paper
+          sx={{
+            p: 2.5,
+            minWidth: 170,
+            borderRadius: 3,
+            border:
+              '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            En cours
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+            color="warning.main"
+          >
+            {progressCount}
+          </Typography>
+        </Paper>
+
+        <Paper
+          sx={{
+            p: 2.5,
+            minWidth: 170,
+            borderRadius: 3,
+            border:
+              '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            En attente client
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+            color="success.main"
+          >
+            {resolvedCount}
+          </Typography>
+        </Paper>
       </Box>
+
+      <Paper
+        sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+          border:
+            '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <Box
+          sx={{
+            p: 2.5,
+            display: 'flex',
+            justifyContent:
+              'space-between',
+            alignItems: 'center',
+            gap: 2,
+            borderBottom:
+              '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <Typography fontWeight="bold">
+            {filteredTickets.length}{' '}
+            ticket
+            {filteredTickets.length !== 1
+              ? 's'
+              : ''}
+          </Typography>
+
+          <TextField
+            size="small"
+            placeholder="Rechercher..."
+            value={search}
+            onChange={(event) =>
+              setSearch(
+                event.target.value
+              )
+            }
+            sx={{
+              width: {
+                xs: '100%',
+                sm: 300,
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment
+                  position="start"
+                >
+                  <SearchIcon
+                    fontSize="small"
+                  />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            height: 610,
+            width: '100%',
+          }}
+        >
+          <DataGrid
+            rows={filteredTickets}
+            columns={columns}
+            loading={loading}
+            pageSizeOptions={[
+              5,
+              10,
+              20,
+            ]}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 10,
+                },
+              },
+            }}
+            disableRowSelectionOnClick
+            sx={{
+              border: 0,
+
+              '& .MuiDataGrid-columnHeaders':
+                {
+                  backgroundColor:
+                    'rgba(255,255,255,0.025)',
+                },
+
+              '& .MuiDataGrid-row:hover':
+                {
+                  backgroundColor:
+                    'rgba(104,112,250,0.04)',
+                },
+            }}
+          />
+        </Box>
+      </Paper>
     </Box>
   )
 }

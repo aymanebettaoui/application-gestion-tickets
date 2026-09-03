@@ -1,15 +1,34 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
+import {
+  useNavigate,
+} from 'react-router-dom'
 
 import {
   Alert,
   Box,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Grid,
+  Paper,
   Typography,
 } from '@mui/material'
+
+import ConfirmationNumberOutlinedIcon
+  from '@mui/icons-material/ConfirmationNumberOutlined'
+import PendingActionsOutlinedIcon
+  from '@mui/icons-material/PendingActionsOutlined'
+import AutorenewOutlinedIcon
+  from '@mui/icons-material/AutorenewOutlined'
+import CheckCircleOutlineOutlinedIcon
+  from '@mui/icons-material/CheckCircleOutlineOutlined'
+
 
 function DashboardPage() {
   const navigate = useNavigate()
@@ -20,7 +39,8 @@ function DashboardPage() {
 
   useEffect(() => {
     const loadTickets = async () => {
-      const token = localStorage.getItem('token')
+      const token =
+        localStorage.getItem('token')
 
       if (!token) {
         navigate('/login')
@@ -32,23 +52,30 @@ function DashboardPage() {
           'http://127.0.0.1:8000/api/tickets/',
           {
             headers: {
-              Authorization: `Token ${token}`,
+              Authorization:
+                `Token ${token}`,
             },
           }
         )
 
-        if (response.status === 401 || response.status === 403) {
-          localStorage.removeItem('token')
+        if (
+          response.status === 401 ||
+          response.status === 403
+        ) {
+          localStorage.clear()
           navigate('/login')
           return
         }
 
         if (!response.ok) {
-          setError('Impossible de charger les données.')
+          setError(
+            'Impossible de charger les données.'
+          )
           return
         }
 
-        const data = await response.json()
+        const data =
+          await response.json()
 
         setTickets(
           Array.isArray(data)
@@ -56,7 +83,9 @@ function DashboardPage() {
             : data.results || []
         )
       } catch {
-        setError('Impossible de contacter le serveur.')
+        setError(
+          'Impossible de contacter le serveur.'
+        )
       } finally {
         setLoading(false)
       }
@@ -65,65 +94,85 @@ function DashboardPage() {
     loadTickets()
   }, [navigate])
 
-  const getStatus = (ticket) =>
-    String(ticket.status || ticket.statut || '').toUpperCase()
+  const stats = useMemo(() => {
+    return {
+      total: tickets.length,
 
-  const totalTickets = tickets.length
+      open: tickets.filter(
+        (ticket) =>
+          ticket.status === 'OPEN'
+      ).length,
 
-  const openTickets = tickets.filter((ticket) => {
-    const status = getStatus(ticket)
+      progress: tickets.filter(
+        (ticket) =>
+          ticket.status === 'IN_PROGRESS'
+      ).length,
 
-    return (
-      status === 'OPEN' ||
-      status === 'OUVERT' ||
-      status === 'TODO' ||
-      status === 'À FAIRE'
-    )
-  }).length
-
-  const inProgressTickets = tickets.filter((ticket) => {
-    const status = getStatus(ticket)
-
-    return (
-      status === 'IN_PROGRESS' ||
-      status === 'IN PROGRESS' ||
-      status === 'EN COURS' ||
-      status === 'ASSIGNED' ||
-      status === 'AFFECTÉ'
-    )
-  }).length
-
-  const resolvedTickets = tickets.filter((ticket) => {
-    const status = getStatus(ticket)
-
-    return (
-      status === 'RESOLVED' ||
-      status === 'RÉSOLU' ||
-      status === 'RESOLU' ||
-      status === 'CLOSED' ||
-      status === 'FERMÉ' ||
-      status === 'FERME'
-    )
-  }).length
+      resolved: tickets.filter(
+        (ticket) =>
+          ticket.status === 'RESOLVED' ||
+          ticket.status === 'CLOSED'
+      ).length,
+    }
+  }, [tickets])
 
   const cards = [
     {
-      title: 'Total Tickets',
-      value: totalTickets,
+      title: 'Total des tickets',
+      value: stats.total,
+      icon: (
+        <ConfirmationNumberOutlinedIcon />
+      ),
+      subtitle:
+        'Tous les tickets enregistrés',
     },
+
     {
       title: 'Tickets ouverts',
-      value: openTickets,
+      value: stats.open,
+      icon: (
+        <PendingActionsOutlinedIcon />
+      ),
+      subtitle:
+        'En attente de traitement',
     },
+
     {
       title: 'En cours',
-      value: inProgressTickets,
+      value: stats.progress,
+      icon: (
+        <AutorenewOutlinedIcon />
+      ),
+      subtitle:
+        'Actuellement traités',
     },
+
     {
       title: 'Résolus',
-      value: resolvedTickets,
+      value: stats.resolved,
+      icon: (
+        <CheckCircleOutlineOutlinedIcon />
+      ),
+      subtitle:
+        'Résolus ou fermés',
     },
   ]
+
+  const statusLabels = {
+    OPEN: 'Ouvert',
+    IN_PROGRESS: 'En cours',
+    RESOLVED: 'Résolu',
+    CLOSED: 'Fermé',
+    CANCELLED: 'Annulé',
+  }
+
+  const statusColors = {
+    OPEN: 'info',
+    IN_PROGRESS: 'warning',
+    RESOLVED: 'success',
+    CLOSED: 'success',
+    CANCELLED: 'error',
+  }
 
   if (loading) {
     return (
@@ -141,20 +190,21 @@ function DashboardPage() {
 
   return (
     <Box>
-      <Typography
-        variant="h3"
-        fontWeight="bold"
-        mb={1}
-      >
-        DASHBOARD
-      </Typography>
+      <Box sx={{ mb: 4 }}>
+        <Typography
+          variant="h3"
+          fontWeight="bold"
+        >
+          Dashboard
+        </Typography>
 
-      <Typography
-        color="secondary"
-        mb={4}
-      >
-        Vue générale de la gestion des tickets
-      </Typography>
+        <Typography
+          color="text.secondary"
+          mt={0.7}
+        >
+          Vue générale de l'activité des tickets
+        </Typography>
+      </Box>
 
       {error && (
         <Alert
@@ -167,25 +217,80 @@ function DashboardPage() {
 
       <Grid
         container
-        spacing={2}
+        spacing={2.5}
       >
         {cards.map((card) => (
           <Grid
             key={card.title}
-            size={{ xs: 12, sm: 6, md: 3 }}
+            size={{
+              xs: 12,
+              sm: 6,
+              lg: 3,
+            }}
           >
-            <Card>
-              <CardContent>
-                <Typography color="text.secondary">
-                  {card.title}
-                </Typography>
+            <Card
+              sx={{
+                height: '100%',
+                borderRadius: 3,
+                border:
+                  '1px solid rgba(255,255,255,0.06)',
+                background:
+                  'linear-gradient(145deg, #1f2a40 0%, #1a2438 100%)',
+              }}
+            >
+              <CardContent
+                sx={{ p: 3 }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent:
+                      'space-between',
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      color="text.secondary"
+                      fontWeight={500}
+                    >
+                      {card.title}
+                    </Typography>
+
+                    <Typography
+                      variant="h3"
+                      fontWeight="bold"
+                      mt={1}
+                    >
+                      {card.value}
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 2.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent:
+                        'center',
+                      color: 'primary.light',
+                      backgroundColor:
+                        'rgba(104,112,250,0.13)',
+                    }}
+                  >
+                    {card.icon}
+                  </Box>
+                </Box>
 
                 <Typography
-                  variant="h3"
-                  fontWeight="bold"
-                  mt={1}
+                  variant="caption"
+                  color="text.secondary"
+                  display="block"
+                  mt={2}
                 >
-                  {card.value}
+                  {card.subtitle}
                 </Typography>
               </CardContent>
             </Card>
@@ -193,41 +298,140 @@ function DashboardPage() {
         ))}
       </Grid>
 
-      <Box mt={5}>
-        <Typography
-          variant="h5"
-          fontWeight="bold"
-          mb={2}
+      <Paper
+        sx={{
+          mt: 4,
+          p: 3,
+          borderRadius: 3,
+          border:
+            '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent:
+              'space-between',
+            alignItems: 'center',
+            mb: 2.5,
+          }}
         >
-          Tickets récents
-        </Typography>
-
-        {tickets.slice(0, 5).map((ticket) => (
-          <Card
-            key={ticket.id}
-            sx={{ mb: 1 }}
-          >
-            <CardContent
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-              }}
+          <Box>
+            <Typography
+              variant="h5"
+              fontWeight="bold"
             >
-              <Typography>
-                {ticket.title ||
-                  ticket.titre ||
-                  `Ticket #${ticket.id}`}
-              </Typography>
+              Tickets récents
+            </Typography>
 
-              <Typography color="secondary">
-                {ticket.status ||
-                  ticket.statut ||
-                  'Non défini'}
-              </Typography>
-            </CardContent>
-          </Card>
-        ))}
-      </Box>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              mt={0.5}
+            >
+              Dernières demandes enregistrées
+            </Typography>
+          </Box>
+
+          <Typography
+            variant="body2"
+            color="primary.light"
+            sx={{
+              cursor: 'pointer',
+              fontWeight: 600,
+            }}
+            onClick={() =>
+              navigate('/tickets')
+            }
+          >
+            Voir tous les tickets
+          </Typography>
+        </Box>
+
+        {tickets.length === 0 ? (
+          <Typography
+            color="text.secondary"
+            py={4}
+            textAlign="center"
+          >
+            Aucun ticket disponible.
+          </Typography>
+        ) : (
+          tickets
+            .slice()
+            .sort(
+              (a, b) =>
+                new Date(b.created_at) -
+                new Date(a.created_at)
+            )
+            .slice(0, 5)
+            .map((ticket) => (
+              <Box
+                key={ticket.id}
+                onClick={() =>
+                  navigate(
+                    `/tickets/${ticket.id}`
+                  )
+                }
+                sx={{
+                  display: 'flex',
+                  justifyContent:
+                    'space-between',
+                  alignItems: 'center',
+                  gap: 2,
+                  py: 2,
+                  px: 1.5,
+                  borderTop:
+                    '1px solid rgba(255,255,255,0.05)',
+                  cursor: 'pointer',
+                  borderRadius: 2,
+
+                  '&:hover': {
+                    backgroundColor:
+                      'rgba(255,255,255,0.03)',
+                  },
+                }}
+              >
+                <Box
+                  sx={{
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography
+                    fontWeight="bold"
+                    noWrap
+                  >
+                    #{ticket.id} ·{' '}
+                    {ticket.title}
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    noWrap
+                    mt={0.4}
+                  >
+                    {ticket.description}
+                  </Typography>
+                </Box>
+
+                <Chip
+                  size="small"
+                  label={
+                    statusLabels[
+                      ticket.status
+                    ] || ticket.status
+                  }
+                  color={
+                    statusColors[
+                      ticket.status
+                    ] || 'default'
+                  }
+                />
+              </Box>
+            ))
+        )}
+      </Paper>
     </Box>
   )
 }

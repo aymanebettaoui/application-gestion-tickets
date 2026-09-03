@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 
@@ -12,12 +13,16 @@ import {
   Box,
   Button,
   Chip,
+  InputAdornment,
+  Paper,
+  TextField,
   Typography,
 } from '@mui/material'
 
 import AddIcon from '@mui/icons-material/Add'
 import CancelIcon from '@mui/icons-material/Cancel'
 import ChatIcon from '@mui/icons-material/Chat'
+import SearchIcon from '@mui/icons-material/Search'
 
 import {
   DataGrid,
@@ -28,13 +33,16 @@ function TicketsPage() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
 
   const navigate = useNavigate()
 
-  const role = localStorage.getItem('role')
+  const role =
+    localStorage.getItem('role')
 
   const loadTickets = async () => {
-    const token = localStorage.getItem('token')
+    const token =
+      localStorage.getItem('token')
 
     if (!token) {
       navigate('/login')
@@ -46,7 +54,8 @@ function TicketsPage() {
         'http://127.0.0.1:8000/api/tickets/',
         {
           headers: {
-            Authorization: `Token ${token}`,
+            Authorization:
+              `Token ${token}`,
           },
         }
       )
@@ -67,13 +76,14 @@ function TicketsPage() {
         return
       }
 
-      const data = await response.json()
+      const data =
+        await response.json()
 
-      const rawTickets = Array.isArray(data)
-        ? data
-        : data.results || []
-
-      setTickets(rawTickets)
+      setTickets(
+        Array.isArray(data)
+          ? data
+          : data.results || []
+      )
     } catch {
       setError(
         'Impossible de contacter le serveur.'
@@ -87,8 +97,11 @@ function TicketsPage() {
     loadTickets()
   }, [navigate])
 
-  const handleCancel = async (ticketId) => {
-    const token = localStorage.getItem('token')
+  const handleCancel = async (
+    ticketId
+  ) => {
+    const token =
+      localStorage.getItem('token')
 
     setError('')
 
@@ -99,20 +112,16 @@ function TicketsPage() {
           method: 'POST',
 
           headers: {
-            Authorization: `Token ${token}`,
+            Authorization:
+              `Token ${token}`,
           },
         }
       )
 
       if (!response.ok) {
-        const data = await response.json()
-
-        console.log(data)
-
         setError(
           "Impossible d'annuler ce ticket."
         )
-
         return
       }
 
@@ -124,62 +133,113 @@ function TicketsPage() {
     }
   }
 
-  const getStatusLabel = (status) => {
-    const labels = {
-      OPEN: 'Ouvert',
-      IN_PROGRESS: 'En cours',
-      RESOLVED: 'Résolu',
-      CLOSED: 'Fermé',
-      CANCELLED: 'Annulé',
-    }
-
-    return labels[status] || status
+  const statusLabels = {
+    OPEN: 'Ouvert',
+    IN_PROGRESS: 'En cours',
+    RESOLVED: 'Résolu',
+    CLOSED: 'Fermé',
+    CANCELLED: 'Annulé',
   }
 
-  const getPriorityLabel = (priority) => {
-    const labels = {
-      LOW: 'Faible',
-      MEDIUM: 'Moyenne',
-      HIGH: 'Élevée',
-      URGENT: 'Urgente',
-    }
-
-    return labels[priority] || priority
+  const priorityLabels = {
+    LOW: 'Faible',
+    MEDIUM: 'Moyenne',
+    HIGH: 'Élevée',
+    URGENT: 'Urgente',
   }
+
+  const statusColors = {
+    OPEN: 'info',
+    IN_PROGRESS: 'warning',
+    RESOLVED: 'success',
+    CLOSED: 'success',
+    CANCELLED: 'error',
+  }
+
+  const priorityColors = {
+    LOW: 'default',
+    MEDIUM: 'info',
+    HIGH: 'warning',
+    URGENT: 'error',
+  }
+
+  const filteredTickets =
+    useMemo(() => {
+      const value =
+        search.trim().toLowerCase()
+
+      if (!value) {
+        return tickets
+      }
+
+      return tickets.filter(
+        (ticket) =>
+          ticket.title
+            ?.toLowerCase()
+            .includes(value) ||
+          ticket.description
+            ?.toLowerCase()
+            .includes(value) ||
+          String(ticket.id).includes(
+            value
+          ) ||
+          statusLabels[
+            ticket.status
+          ]
+            ?.toLowerCase()
+            .includes(value)
+      )
+    }, [tickets, search])
 
   const columns = [
     {
       field: 'id',
       headerName: 'ID',
-      width: 70,
+      width: 75,
     },
 
     {
       field: 'title',
       headerName: 'Titre',
       flex: 1,
-      minWidth: 180,
+      minWidth: 190,
+
+      renderCell: (params) => (
+        <Typography
+          fontWeight={600}
+          variant="body2"
+        >
+          {params.row.title}
+        </Typography>
+      ),
     },
 
     {
       field: 'description',
       headerName: 'Description',
-      flex: 1,
-      minWidth: 220,
+      flex: 1.4,
+      minWidth: 240,
     },
 
     {
       field: 'priority',
       headerName: 'Priorité',
-      width: 130,
+      width: 125,
 
       renderCell: (params) => (
         <Chip
           size="small"
+          variant="outlined"
           label={
-            getPriorityLabel(
+            priorityLabels[
               params.row.priority
-            )
+            ] ||
+            params.row.priority
+          }
+          color={
+            priorityColors[
+              params.row.priority
+            ] || 'default'
           }
         />
       ),
@@ -188,37 +248,35 @@ function TicketsPage() {
     {
       field: 'status',
       headerName: 'Statut',
-      width: 140,
+      width: 135,
 
       renderCell: (params) => (
         <Chip
           size="small"
           label={
-            getStatusLabel(
+            statusLabels[
               params.row.status
-            )
+            ] ||
+            params.row.status
           }
           color={
-            params.row.status === 'RESOLVED'
-              ? 'success'
-              : params.row.status === 'IN_PROGRESS'
-              ? 'warning'
-              : params.row.status === 'CANCELLED'
-              ? 'error'
-              : params.row.status === 'CLOSED'
-              ? 'success'
-              : 'default'
+            statusColors[
+              params.row.status
+            ] || 'default'
           }
         />
       ),
     },
   ]
 
-  if (role === 'CLIENT') {
+  if (
+    role === 'CLIENT' ||
+    role === 'ADMIN'
+  ) {
     columns.push({
       field: 'conversation',
       headerName: 'Discussion',
-      width: 150,
+      width: 145,
       sortable: false,
       filterable: false,
 
@@ -233,23 +291,28 @@ function TicketsPage() {
             )
           }
         >
-          Ouvrir
+          {role === 'ADMIN'
+            ? 'Voir'
+            : 'Ouvrir'}
         </Button>
       ),
     })
+  }
 
+  if (role === 'CLIENT') {
     columns.push({
       field: 'action',
       headerName: 'Action',
-      width: 150,
+      width: 140,
       sortable: false,
       filterable: false,
 
       renderCell: (params) => {
-        if (params.row.status !== 'OPEN') {
+        if (
+          params.row.status !== 'OPEN'
+        ) {
           return (
             <Typography
-              variant="body2"
               color="text.secondary"
             >
               —
@@ -275,65 +338,49 @@ function TicketsPage() {
     })
   }
 
-  if (role === 'ADMIN') {
-    columns.push({
-      field: 'conversation',
-      headerName: 'Discussion',
-      width: 150,
-      sortable: false,
-      filterable: false,
-
-      renderCell: (params) => (
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<ChatIcon />}
-          onClick={() =>
-            navigate(
-              `/tickets/${params.row.id}`
-            )
-          }
-        >
-          Voir
-        </Button>
-      ),
-    })
-  }
-
   return (
     <Box>
-
       <Box
         sx={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          justifyContent:
+            'space-between',
+          alignItems: {
+            xs: 'flex-start',
+            md: 'center',
+          },
+          flexDirection: {
+            xs: 'column',
+            md: 'row',
+          },
+          gap: 2,
           mb: 3,
         }}
       >
-
         <Box>
           <Typography
             variant="h3"
             fontWeight="bold"
           >
             {role === 'CLIENT'
-              ? 'MES TICKETS'
-              : 'TICKETS'}
+              ? 'Mes tickets'
+              : 'Tickets'}
           </Typography>
 
           <Typography
-            color="secondary"
+            color="text.secondary"
+            mt={0.6}
           >
             {role === 'CLIENT'
-              ? 'Suivi de mes demandes'
-              : 'Liste des tickets'}
+              ? 'Suivez vos demandes et échangez avec le support'
+              : 'Consultez et suivez les tickets enregistrés'}
           </Typography>
         </Box>
 
         {role === 'CLIENT' && (
           <Button
             variant="contained"
+            size="large"
             startIcon={<AddIcon />}
             onClick={() =>
               navigate('/new-ticket')
@@ -342,7 +389,6 @@ function TicketsPage() {
             Nouveau ticket
           </Button>
         )}
-
       </Box>
 
       {error && (
@@ -354,32 +400,106 @@ function TicketsPage() {
         </Alert>
       )}
 
-      <Box
+      <Paper
         sx={{
-          height: 600,
-          width: '100%',
+          borderRadius: 3,
+          overflow: 'hidden',
+          border:
+            '1px solid rgba(255,255,255,0.06)',
         }}
       >
-        <DataGrid
-          rows={tickets}
-          columns={columns}
-          loading={loading}
-          pageSizeOptions={[
-            5,
-            10,
-            20,
-          ]}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 10,
-              },
-            },
+        <Box
+          sx={{
+            p: 2.5,
+            display: 'flex',
+            justifyContent:
+              'space-between',
+            alignItems: 'center',
+            gap: 2,
+            borderBottom:
+              '1px solid rgba(255,255,255,0.06)',
           }}
-          disableRowSelectionOnClick
-        />
-      </Box>
+        >
+          <Typography
+            fontWeight="bold"
+          >
+            {filteredTickets.length}{' '}
+            ticket
+            {filteredTickets.length !== 1
+              ? 's'
+              : ''}
+          </Typography>
 
+          <TextField
+            size="small"
+            placeholder="Rechercher..."
+            value={search}
+            onChange={(event) =>
+              setSearch(
+                event.target.value
+              )
+            }
+            sx={{
+              width: {
+                xs: '100%',
+                sm: 300,
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment
+                  position="start"
+                >
+                  <SearchIcon
+                    fontSize="small"
+                  />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            height: 610,
+            width: '100%',
+          }}
+        >
+          <DataGrid
+            rows={filteredTickets}
+            columns={columns}
+            loading={loading}
+            pageSizeOptions={[
+              5,
+              10,
+              20,
+            ]}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 10,
+                },
+              },
+            }}
+            disableRowSelectionOnClick
+            sx={{
+              border: 0,
+
+              '& .MuiDataGrid-columnHeaders':
+                {
+                  backgroundColor:
+                    'rgba(255,255,255,0.025)',
+                },
+
+              '& .MuiDataGrid-row:hover':
+                {
+                  backgroundColor:
+                    'rgba(104,112,250,0.04)',
+                },
+            }}
+          />
+        </Box>
+      </Paper>
     </Box>
   )
 }

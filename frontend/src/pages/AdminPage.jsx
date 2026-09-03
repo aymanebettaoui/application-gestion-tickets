@@ -1,16 +1,33 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
+
+import {
+  useNavigate,
+} from 'react-router-dom'
 
 import {
   Alert,
   Box,
   Chip,
+  InputAdornment,
   MenuItem,
+  Paper,
   Select,
+  TextField,
   Typography,
 } from '@mui/material'
 
-import { DataGrid } from '@mui/x-data-grid'
+import SearchIcon from '@mui/icons-material/Search'
+import AssignmentIndOutlinedIcon
+  from '@mui/icons-material/AssignmentIndOutlined'
+
+import {
+  DataGrid,
+} from '@mui/x-data-grid'
+
 
 function AdminPage() {
   const navigate = useNavigate()
@@ -19,8 +36,10 @@ function AdminPage() {
   const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
 
-  const getToken = () => localStorage.getItem('token')
+  const getToken = () =>
+    localStorage.getItem('token')
 
   const loadData = async () => {
     const token = getToken()
@@ -31,35 +50,49 @@ function AdminPage() {
     }
 
     try {
-      const [ticketsResponse, agentsResponse] = await Promise.all([
-        fetch('http://127.0.0.1:8000/api/tickets/', {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        }),
+      const [
+        ticketsResponse,
+        agentsResponse,
+      ] = await Promise.all([
+        fetch(
+          'http://127.0.0.1:8000/api/tickets/',
+          {
+            headers: {
+              Authorization:
+                `Token ${token}`,
+            },
+          }
+        ),
 
-        fetch('http://127.0.0.1:8000/api/users/', {
-          headers: {
-            Authorization: `Token ${token}`,
-          },
-        }),
+        fetch(
+          'http://127.0.0.1:8000/api/users/',
+          {
+            headers: {
+              Authorization:
+                `Token ${token}`,
+            },
+          }
+        ),
       ])
 
       if (
         ticketsResponse.status === 401 ||
         ticketsResponse.status === 403
       ) {
-        localStorage.removeItem('token')
+        localStorage.clear()
         navigate('/login')
         return
       }
 
       if (!ticketsResponse.ok) {
-        setError('Impossible de charger les tickets.')
+        setError(
+          'Impossible de charger les tickets.'
+        )
         return
       }
 
-      const ticketsData = await ticketsResponse.json()
+      const ticketsData =
+        await ticketsResponse.json()
 
       setTickets(
         Array.isArray(ticketsData)
@@ -68,7 +101,8 @@ function AdminPage() {
       )
 
       if (agentsResponse.ok) {
-        const agentsData = await agentsResponse.json()
+        const agentsData =
+          await agentsResponse.json()
 
         setAgents(
           Array.isArray(agentsData)
@@ -77,7 +111,9 @@ function AdminPage() {
         )
       }
     } catch {
-      setError('Impossible de contacter le serveur.')
+      setError(
+        'Impossible de contacter le serveur.'
+      )
     } finally {
       setLoading(false)
     }
@@ -87,7 +123,10 @@ function AdminPage() {
     loadData()
   }, [])
 
-  const handleAssign = async (ticketId, agentId) => {
+  const handleAssign = async (
+    ticketId,
+    agentId
+  ) => {
     const token = getToken()
 
     setError('')
@@ -99,32 +138,109 @@ function AdminPage() {
           method: 'PATCH',
 
           headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Token ${token}`,
+            'Content-Type':
+              'application/json',
+
+            Authorization:
+              `Token ${token}`,
           },
 
           body: JSON.stringify({
-            assigned_to: agentId || null,
+            assigned_to:
+              agentId || null,
           }),
         }
       )
 
       if (!response.ok) {
-        setError("Impossible d'affecter le ticket.")
+        setError(
+          "Impossible d'affecter le ticket."
+        )
         return
       }
 
       await loadData()
     } catch {
-      setError('Impossible de contacter le serveur.')
+      setError(
+        'Impossible de contacter le serveur.'
+      )
     }
   }
+
+  const statusLabels = {
+    OPEN: 'Ouvert',
+    IN_PROGRESS: 'En cours',
+    RESOLVED: 'Résolu',
+    CLOSED: 'Fermé',
+    CANCELLED: 'Annulé',
+  }
+
+  const priorityLabels = {
+    LOW: 'Faible',
+    MEDIUM: 'Moyenne',
+    HIGH: 'Élevée',
+    URGENT: 'Urgente',
+  }
+
+  const statusColors = {
+    OPEN: 'info',
+    IN_PROGRESS: 'warning',
+    RESOLVED: 'success',
+    CLOSED: 'success',
+    CANCELLED: 'error',
+  }
+
+  const priorityColors = {
+    LOW: 'default',
+    MEDIUM: 'info',
+    HIGH: 'warning',
+    URGENT: 'error',
+  }
+
+  const filteredTickets =
+    useMemo(() => {
+      const value =
+        search.trim().toLowerCase()
+
+      if (!value) {
+        return tickets
+      }
+
+      return tickets.filter(
+        (ticket) =>
+          ticket.title
+            ?.toLowerCase()
+            .includes(value) ||
+
+          ticket.description
+            ?.toLowerCase()
+            .includes(value) ||
+
+          String(ticket.id)
+            .includes(value) ||
+
+          statusLabels[
+            ticket.status
+          ]
+            ?.toLowerCase()
+            .includes(value)
+      )
+    }, [tickets, search])
+
+  const assignedCount =
+    tickets.filter(
+      (ticket) =>
+        ticket.assigned_to !== null
+    ).length
+
+  const unassignedCount =
+    tickets.length - assignedCount
 
   const columns = [
     {
       field: 'id',
       headerName: 'ID',
-      width: 70,
+      width: 75,
     },
 
     {
@@ -132,17 +248,37 @@ function AdminPage() {
       headerName: 'Titre',
       flex: 1,
       minWidth: 200,
+
+      renderCell: (params) => (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+        >
+          {params.row.title}
+        </Typography>
+      ),
     },
 
     {
       field: 'priority',
       headerName: 'Priorité',
-      width: 140,
+      width: 130,
 
       renderCell: (params) => (
         <Chip
-          label={params.row.priority}
           size="small"
+          variant="outlined"
+          label={
+            priorityLabels[
+              params.row.priority
+            ] ||
+            params.row.priority
+          }
+          color={
+            priorityColors[
+              params.row.priority
+            ] || 'default'
+          }
         />
       ),
     },
@@ -150,18 +286,21 @@ function AdminPage() {
     {
       field: 'status',
       headerName: 'Statut',
-      width: 160,
+      width: 140,
 
       renderCell: (params) => (
         <Chip
-          label={params.row.status}
           size="small"
+          label={
+            statusLabels[
+              params.row.status
+            ] ||
+            params.row.status
+          }
           color={
-            params.row.status === 'RESOLVED'
-              ? 'success'
-              : params.row.status === 'IN_PROGRESS'
-              ? 'warning'
-              : 'default'
+            statusColors[
+              params.row.status
+            ] || 'default'
           }
         />
       ),
@@ -170,21 +309,29 @@ function AdminPage() {
     {
       field: 'assigned_to',
       headerName: 'Affectation',
-      width: 220,
+      width: 230,
+      sortable: false,
 
       renderCell: (params) => (
         <Select
           size="small"
-          value={params.row.assigned_to || ''}
+          value={
+            params.row.assigned_to || ''
+          }
           displayEmpty
-          onClick={(event) => event.stopPropagation()}
+          onClick={(event) =>
+            event.stopPropagation()
+          }
           onChange={(event) =>
             handleAssign(
               params.row.id,
               event.target.value
             )
           }
-          sx={{ width: 190 }}
+          sx={{
+            width: 200,
+            borderRadius: 2,
+          }}
         >
           <MenuItem value="">
             Non assigné
@@ -205,25 +352,27 @@ function AdminPage() {
 
   return (
     <Box>
-      <Typography
-        variant="h3"
-        fontWeight="bold"
-        mb={1}
-      >
-        ADMINISTRATION
-      </Typography>
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h3"
+          fontWeight="bold"
+        >
+          Administration
+        </Typography>
 
-      <Typography
-        color="secondary"
-        mb={3}
-      >
-        Affectation et suivi des tickets
-      </Typography>
+        <Typography
+          color="text.secondary"
+          mt={0.7}
+        >
+          Affectez les tickets aux agents
+          disponibles
+        </Typography>
+      </Box>
 
       {error && (
         <Alert
           severity="error"
-          sx={{ mb: 2 }}
+          sx={{ mb: 3 }}
         >
           {error}
         </Alert>
@@ -231,25 +380,203 @@ function AdminPage() {
 
       <Box
         sx={{
-          height: 600,
-          width: '100%',
+          display: 'flex',
+          gap: 2,
+          mb: 3,
+          flexWrap: 'wrap',
         }}
       >
-        <DataGrid
-          rows={tickets}
-          columns={columns}
-          loading={loading}
-          pageSizeOptions={[5, 10, 20]}
-          initialState={{
-            pagination: {
-              paginationModel: {
-                pageSize: 10,
-              },
-            },
+        <Paper
+          sx={{
+            px: 3,
+            py: 2,
+            minWidth: 180,
+            borderRadius: 3,
+            border:
+              '1px solid rgba(255,255,255,0.06)',
           }}
-          disableRowSelectionOnClick
-        />
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            Total
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+          >
+            {tickets.length}
+          </Typography>
+        </Paper>
+
+        <Paper
+          sx={{
+            px: 3,
+            py: 2,
+            minWidth: 180,
+            borderRadius: 3,
+            border:
+              '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            Affectés
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+            color="secondary"
+          >
+            {assignedCount}
+          </Typography>
+        </Paper>
+
+        <Paper
+          sx={{
+            px: 3,
+            py: 2,
+            minWidth: 180,
+            borderRadius: 3,
+            border:
+              '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            color="text.secondary"
+          >
+            Non affectés
+          </Typography>
+
+          <Typography
+            variant="h4"
+            fontWeight="bold"
+            color="warning.main"
+          >
+            {unassignedCount}
+          </Typography>
+        </Paper>
       </Box>
+
+      <Paper
+        sx={{
+          borderRadius: 3,
+          overflow: 'hidden',
+
+          border:
+            '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <Box
+          sx={{
+            p: 2.5,
+
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent:
+              'space-between',
+
+            gap: 2,
+
+            borderBottom:
+              '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}
+          >
+            <AssignmentIndOutlinedIcon
+              color="primary"
+            />
+
+            <Typography
+              fontWeight="bold"
+            >
+              Affectation des tickets
+            </Typography>
+          </Box>
+
+          <TextField
+            size="small"
+            placeholder="Rechercher..."
+            value={search}
+            onChange={(event) =>
+              setSearch(
+                event.target.value
+              )
+            }
+            sx={{
+              width: {
+                xs: '100%',
+                sm: 300,
+              },
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment
+                  position="start"
+                >
+                  <SearchIcon
+                    fontSize="small"
+                  />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            height: 610,
+            width: '100%',
+          }}
+        >
+          <DataGrid
+            rows={filteredTickets}
+            columns={columns}
+            loading={loading}
+            pageSizeOptions={[
+              5,
+              10,
+              20,
+            ]}
+            initialState={{
+              pagination: {
+                paginationModel: {
+                  pageSize: 10,
+                },
+              },
+            }}
+            disableRowSelectionOnClick
+
+            sx={{
+              border: 0,
+
+              '& .MuiDataGrid-columnHeaders':
+                {
+                  backgroundColor:
+                    'rgba(255,255,255,0.025)',
+                },
+
+              '& .MuiDataGrid-row:hover':
+                {
+                  backgroundColor:
+                    'rgba(104,112,250,0.04)',
+                },
+            }}
+          />
+        </Box>
+      </Paper>
     </Box>
   )
 }
