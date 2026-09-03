@@ -1,0 +1,60 @@
+.app {
+  min-height: 100vh;
+  background: #f4f6f8;
+}
+
+.topbar {
+  background: white;
+  padding: 24px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #dddddd;
+}
+
+.topbar h1 {
+  margin: 0;
+}
+
+.subtitle {
+  margin: 0 0 5px;
+  color: #666666;
+}
+
+.frontend-status {
+  background: #e8f5e9;
+  padding: 8px 14px;
+  border-radius: 20px;
+}
+
+.content {
+  padding: 40px;
+}
+
+.welcome {
+  margin-bottom: 30px;
+}
+
+.cards {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.card {
+  background: white;
+  border: 1px solid #dddddd;
+  border-radius: 10px;
+  padding: 24px;
+  width: 280px;
+}
+
+.card button {
+  margin-top: 15px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #222222;
+  color: white;
+}
