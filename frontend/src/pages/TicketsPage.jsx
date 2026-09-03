@@ -17,6 +17,7 @@ import {
 
 import AddIcon from '@mui/icons-material/Add'
 import CancelIcon from '@mui/icons-material/Cancel'
+import ChatIcon from '@mui/icons-material/Chat'
 
 import {
   DataGrid,
@@ -111,6 +112,7 @@ function TicketsPage() {
         setError(
           "Impossible d'annuler ce ticket."
         )
+
         return
       }
 
@@ -123,47 +125,26 @@ function TicketsPage() {
   }
 
   const getStatusLabel = (status) => {
-    if (status === 'OPEN') {
-      return 'Ouvert'
+    const labels = {
+      OPEN: 'Ouvert',
+      IN_PROGRESS: 'En cours',
+      RESOLVED: 'Résolu',
+      CLOSED: 'Fermé',
+      CANCELLED: 'Annulé',
     }
 
-    if (status === 'IN_PROGRESS') {
-      return 'En cours'
-    }
-
-    if (status === 'RESOLVED') {
-      return 'Résolu'
-    }
-
-    if (status === 'CLOSED') {
-      return 'Fermé'
-    }
-
-    if (status === 'CANCELLED') {
-      return 'Annulé'
-    }
-
-    return status
+    return labels[status] || status
   }
 
   const getPriorityLabel = (priority) => {
-    if (priority === 'LOW') {
-      return 'Faible'
+    const labels = {
+      LOW: 'Faible',
+      MEDIUM: 'Moyenne',
+      HIGH: 'Élevée',
+      URGENT: 'Urgente',
     }
 
-    if (priority === 'MEDIUM') {
-      return 'Moyenne'
-    }
-
-    if (priority === 'HIGH') {
-      return 'Élevée'
-    }
-
-    if (priority === 'URGENT') {
-      return 'Urgente'
-    }
-
-    return priority
+    return labels[priority] || priority
   }
 
   const columns = [
@@ -224,6 +205,8 @@ function TicketsPage() {
               ? 'warning'
               : params.row.status === 'CANCELLED'
               ? 'error'
+              : params.row.status === 'CLOSED'
+              ? 'success'
               : 'default'
           }
         />
@@ -233,9 +216,32 @@ function TicketsPage() {
 
   if (role === 'CLIENT') {
     columns.push({
+      field: 'conversation',
+      headerName: 'Discussion',
+      width: 150,
+      sortable: false,
+      filterable: false,
+
+      renderCell: (params) => (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<ChatIcon />}
+          onClick={() =>
+            navigate(
+              `/tickets/${params.row.id}`
+            )
+          }
+        >
+          Ouvrir
+        </Button>
+      ),
+    })
+
+    columns.push({
       field: 'action',
       headerName: 'Action',
-      width: 160,
+      width: 150,
       sortable: false,
       filterable: false,
 
@@ -257,13 +263,40 @@ function TicketsPage() {
             color="error"
             startIcon={<CancelIcon />}
             onClick={() =>
-              handleCancel(params.row.id)
+              handleCancel(
+                params.row.id
+              )
             }
           >
             Annuler
           </Button>
         )
       },
+    })
+  }
+
+  if (role === 'ADMIN') {
+    columns.push({
+      field: 'conversation',
+      headerName: 'Discussion',
+      width: 150,
+      sortable: false,
+      filterable: false,
+
+      renderCell: (params) => (
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<ChatIcon />}
+          onClick={() =>
+            navigate(
+              `/tickets/${params.row.id}`
+            )
+          }
+        >
+          Voir
+        </Button>
+      ),
     })
   }
 

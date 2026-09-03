@@ -3,20 +3,23 @@ from rest_framework.permissions import BasePermission
 
 class TicketPermission(BasePermission):
 
-    def has_permission(self, request, view):
+    def has_permission(
+        self,
+        request,
+        view
+    ):
         user = request.user
 
-        # User must be authenticated
         if not user.is_authenticated:
             return False
 
-        # ADMIN can do everything
         if user.role == "ADMIN":
+
             if request.method == "POST":
-                return False  # Admin cannot create tickets via API
+                return False
+
             return True
 
-        # CLIENT
         if user.role == "CLIENT":
             return request.method in [
                 "GET",
@@ -27,8 +30,14 @@ class TicketPermission(BasePermission):
                 "OPTIONS",
             ]
 
-        # AGENT
         if user.role == "AGENT":
+
+            if (
+                request.method == "POST"
+                and view.action == "messages"
+            ):
+                return True
+
             return request.method in [
                 "GET",
                 "PUT",
@@ -39,25 +48,34 @@ class TicketPermission(BasePermission):
 
         return False
 
-
-    def has_object_permission(self, request, view, obj):
+    def has_object_permission(
+        self,
+        request,
+        view,
+        obj
+    ):
         user = request.user
 
-        # ADMIN can access every ticket
         if user.role == "ADMIN":
             return True
 
-        # CLIENT can only access their own tickets
         if user.role == "CLIENT":
 
             if obj.created_by != user:
                 return False
 
-            # Client can cancel their own ticket
             if view.action == "cancel":
                 return True
 
-            # Client can read their own ticket
+            if view.action == "messages":
+                return True
+
+            if view.action in [
+                "confirm_resolution",
+                "reopen",
+            ]:
+                return True
+
             if request.method in [
                 "GET",
                 "HEAD",
@@ -65,7 +83,6 @@ class TicketPermission(BasePermission):
             ]:
                 return True
 
-            # Client can edit their own ticket only while OPEN
             if request.method in [
                 "PUT",
                 "PATCH",
@@ -74,11 +91,13 @@ class TicketPermission(BasePermission):
 
             return False
 
-        # AGENT can only access tickets assigned to them
         if user.role == "AGENT":
 
             if obj.assigned_to != user:
                 return False
+
+            if view.action == "messages":
+                return True
 
             return request.method in [
                 "GET",
@@ -93,9 +112,12 @@ class TicketPermission(BasePermission):
 
 class IsAdminOrReadOnly(BasePermission):
 
-    def has_permission(self, request, view):
+    def has_permission(
+        self,
+        request,
+        view
+    ):
 
-        # Authenticated users can read categories
         if request.method in [
             "GET",
             "HEAD",
@@ -103,7 +125,6 @@ class IsAdminOrReadOnly(BasePermission):
         ]:
             return request.user.is_authenticated
 
-        # Only ADMIN can create/edit/delete categories
         return (
             request.user.is_authenticated
             and request.user.role == "ADMIN"

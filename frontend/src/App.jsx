@@ -16,6 +16,7 @@ import TicketsPage from './pages/TicketsPage.jsx'
 import CreateTicketPage from './pages/CreateTicketPage.jsx'
 import AdminPage from './pages/AdminPage.jsx'
 import AgentPage from './pages/AgentPage.jsx'
+import TicketDetailPage from './pages/TicketDetailPage.jsx'
 
 import DashboardLayout from './components/DashboardLayout.jsx'
 
@@ -53,6 +54,11 @@ function App() {
             <Route
               path="/tickets"
               element={<TicketsPage />}
+            />
+
+            <Route
+              path="/tickets/:id"
+              element={<TicketDetailPage />}
             />
 
             <Route

@@ -1,5 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import {
+  useEffect,
+  useState,
+} from 'react'
+
+import {
+  useNavigate,
+} from 'react-router-dom'
 
 import {
   Alert,
@@ -9,7 +15,11 @@ import {
   Typography,
 } from '@mui/material'
 
-import { DataGrid } from '@mui/x-data-grid'
+import ChatIcon from '@mui/icons-material/Chat'
+
+import {
+  DataGrid,
+} from '@mui/x-data-grid'
 
 
 function AgentPage() {
@@ -19,10 +29,9 @@ function AgentPage() {
 
   const navigate = useNavigate()
 
-  const getToken = () => localStorage.getItem('token')
-
   const loadTickets = async () => {
-    const token = getToken()
+    const token =
+      localStorage.getItem('token')
 
     if (!token) {
       navigate('/login')
@@ -34,7 +43,8 @@ function AgentPage() {
         'http://127.0.0.1:8000/api/tickets/',
         {
           headers: {
-            Authorization: `Token ${token}`,
+            Authorization:
+              `Token ${token}`,
           },
         }
       )
@@ -49,28 +59,33 @@ function AgentPage() {
       }
 
       if (!response.ok) {
-        setError('Impossible de charger les tickets.')
+        setError(
+          'Impossible de charger les tickets.'
+        )
         return
       }
 
       const data = await response.json()
 
-      const ticketList = Array.isArray(data)
-        ? data
-        : data.results || []
-
-      setTickets(ticketList)
+      setTickets(
+        Array.isArray(data)
+          ? data
+          : data.results || []
+      )
     } catch {
-      setError('Impossible de contacter le serveur.')
+      setError(
+        'Impossible de contacter le serveur.'
+      )
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    const role = localStorage.getItem('role')
-
-    if (role !== 'AGENT') {
+    if (
+      localStorage.getItem('role')
+      !== 'AGENT'
+    ) {
       navigate('/login')
       return
     }
@@ -78,80 +93,16 @@ function AgentPage() {
     loadTickets()
   }, [navigate])
 
-  const handleStatusChange = async (ticket) => {
-    let newStatus = null
-
-    if (ticket.status === 'OPEN') {
-      newStatus = 'IN_PROGRESS'
-    }
-
-    if (ticket.status === 'IN_PROGRESS') {
-      newStatus = 'RESOLVED'
-    }
-
-    if (!newStatus) {
-      return
-    }
-
-    const token = getToken()
-
-    setError('')
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/tickets/${ticket.id}/update_status/`,
-        {
-          method: 'PATCH',
-
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Token ${token}`,
-          },
-
-          body: JSON.stringify({
-            status: newStatus,
-          }),
-        }
-      )
-
-      if (!response.ok) {
-        const data = await response.json()
-        console.log(data)
-
-        setError(
-          'Impossible de modifier le statut du ticket.'
-        )
-        return
-      }
-
-      await loadTickets()
-    } catch {
-      setError('Impossible de contacter le serveur.')
-    }
-  }
-
   const getStatusLabel = (status) => {
-    if (status === 'OPEN') {
-      return 'Ouvert'
+    const labels = {
+      OPEN: 'Ouvert',
+      IN_PROGRESS: 'En cours',
+      RESOLVED: 'Résolu',
+      CLOSED: 'Fermé',
+      CANCELLED: 'Annulé',
     }
 
-    if (status === 'IN_PROGRESS') {
-      return 'En cours'
-    }
-
-    if (status === 'RESOLVED') {
-      return 'Résolu'
-    }
-
-    if (status === 'CLOSED') {
-      return 'Fermé'
-    }
-
-    if (status === 'CANCELLED') {
-      return 'Annulé'
-    }
-
-    return status
+    return labels[status] || status
   }
 
   const columns = [
@@ -191,16 +142,22 @@ function AgentPage() {
     {
       field: 'status',
       headerName: 'Statut',
-      width: 140,
+      width: 150,
 
       renderCell: (params) => (
         <Chip
-          label={getStatusLabel(params.row.status)}
+          label={
+            getStatusLabel(
+              params.row.status
+            )
+          }
           size="small"
           color={
-            params.row.status === 'RESOLVED'
+            params.row.status ===
+            'RESOLVED'
               ? 'success'
-              : params.row.status === 'IN_PROGRESS'
+              : params.row.status ===
+                'IN_PROGRESS'
               ? 'warning'
               : 'default'
           }
@@ -210,47 +167,24 @@ function AgentPage() {
 
     {
       field: 'action',
-      headerName: 'Action',
-      width: 180,
+      headerName: 'Conversation',
+      width: 160,
       sortable: false,
-      filterable: false,
 
-      renderCell: (params) => {
-        if (params.row.status === 'OPEN') {
-          return (
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() =>
-                handleStatusChange(params.row)
-              }
-            >
-              Commencer
-            </Button>
-          )
-        }
-
-        if (params.row.status === 'IN_PROGRESS') {
-          return (
-            <Button
-              variant="contained"
-              color="success"
-              size="small"
-              onClick={() =>
-                handleStatusChange(params.row)
-              }
-            >
-              Résoudre
-            </Button>
-          )
-        }
-
-        return (
-          <Typography variant="body2">
-            Aucune action
-          </Typography>
-        )
-      },
+      renderCell: (params) => (
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<ChatIcon />}
+          onClick={() =>
+            navigate(
+              `/tickets/${params.row.id}`
+            )
+          }
+        >
+          Ouvrir
+        </Button>
+      ),
     },
   ]
 
@@ -268,7 +202,8 @@ function AgentPage() {
         color="secondary"
         mb={3}
       >
-        Traitement des tickets qui me sont affectés
+        Échangez avec les clients pour
+        résoudre leurs demandes
       </Typography>
 
       {error && (

@@ -1,6 +1,13 @@
-from rest_framework import serializers
-from .models import Ticket, Category
 from django.contrib.auth import get_user_model
+
+from rest_framework import serializers
+
+from .models import (
+    Ticket,
+    Category,
+    TicketMessage,
+)
+
 
 User = get_user_model()
 
@@ -12,7 +19,6 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class TicketSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Ticket
         fields = "__all__"
@@ -26,48 +32,52 @@ class TicketSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         request = self.context.get("request")
 
-        if not request or not request.user.is_authenticated:
+        if (
+            not request
+            or not request.user.is_authenticated
+        ):
             return attrs
 
         user = request.user
 
-        # If somebody assigns a user, that user must be an AGENT
         if "assigned_to" in attrs:
-            assigned_user = attrs.get("assigned_to")
+            assigned_user = attrs.get(
+                "assigned_to"
+            )
 
-            if assigned_user is not None and assigned_user.role != "AGENT":
-                raise serializers.ValidationError(
-                    {
-                        "assigned_to":
-                        "Tickets can only be assigned to an agent."
-                    }
-                )
+            if (
+                assigned_user is not None
+                and assigned_user.role != "AGENT"
+            ):
+                raise serializers.ValidationError({
+                    "assigned_to":
+                    "Tickets can only be assigned to an agent."
+                })
 
-        # CLIENT restrictions
         if user.role == "CLIENT" and self.instance:
 
             if "status" in attrs:
-                raise serializers.ValidationError(
-                    {
-                        "status":
-                        "Clients cannot change ticket status."
-                    }
-                )
+                raise serializers.ValidationError({
+                    "status":
+                    "Clients cannot change ticket status."
+                })
 
             if "assigned_to" in attrs:
-                raise serializers.ValidationError(
-                    {
-                        "assigned_to":
-                        "Clients cannot assign tickets."
-                    }
-                )
+                raise serializers.ValidationError({
+                    "assigned_to":
+                    "Clients cannot assign tickets."
+                })
 
-        # AGENT restrictions
         if user.role == "AGENT" and self.instance:
 
-            allowed_fields = {"status"}
+            allowed_fields = {
+                "status",
+            }
 
-            invalid_fields = set(attrs.keys()) - allowed_fields
+            invalid_fields = (
+                set(attrs.keys())
+                - allowed_fields
+            )
 
             if invalid_fields:
                 raise serializers.ValidationError(
@@ -76,9 +86,11 @@ class TicketSerializer(serializers.ModelSerializer):
 
         return attrs
 
+
 class AgentSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
+
         fields = [
             "id",
             "username",
@@ -86,4 +98,37 @@ class AgentSerializer(serializers.ModelSerializer):
             "last_name",
             "email",
             "role",
+        ]
+
+
+class TicketMessageSerializer(
+    serializers.ModelSerializer
+):
+    sender_username = serializers.CharField(
+        source="sender.username",
+        read_only=True
+    )
+
+    sender_role = serializers.CharField(
+        source="sender.role",
+        read_only=True
+    )
+
+    class Meta:
+        model = TicketMessage
+
+        fields = [
+            "id",
+            "ticket",
+            "sender",
+            "sender_username",
+            "sender_role",
+            "content",
+            "created_at",
+        ]
+
+        read_only_fields = [
+            "ticket",
+            "sender",
+            "created_at",
         ]
